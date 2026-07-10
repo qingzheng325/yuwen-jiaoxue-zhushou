@@ -7,7 +7,7 @@ export interface Student {
 }
 
 // ===== 背默标记 =====
-export type RecitationType = "诗歌" | "文言文原文" | "文言文注释";
+export type RecitationType = "诗歌" | "文言文原文" | "文言文注释" | "字词";
 export type RecitationStatus = "过关" | "重默" | "未测";
 
 export interface RecitationItem {

@@ -53,6 +53,7 @@ export function RecitationModule() {
               <SelectItem value="诗歌">诗歌</SelectItem>
               <SelectItem value="文言文原文">文言文原文</SelectItem>
               <SelectItem value="文言文注释">文言文注释</SelectItem>
+              <SelectItem value="字词">字词</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={handleAddItem} disabled={!newItemTitle.trim()}>
@@ -67,7 +68,7 @@ export function RecitationModule() {
                 key={item.id}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5"
               >
-                <Badge className={item.type === "诗歌" ? "bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs" : item.type === "文言文原文" ? "bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs"}>
+                <Badge className={item.type === "诗歌" ? "bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs" : item.type === "文言文原文" ? "bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs" : item.type === "字词" ? "bg-amber-100 text-amber-700 hover:bg-amber-100 text-xs" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs"}>
                   {item.type}
                 </Badge>
                 <span className="text-sm">{item.title}</span>
@@ -559,7 +560,7 @@ function ByStudentView() {
                 {itemData.map(({ item, rounds }) => (
                   <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50">
                     <td className="px-3 py-2">
-                      <Badge className={item.type === "诗歌" ? "bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs mr-1" : item.type === "文言文原文" ? "bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs mr-1" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs mr-1"}>
+                      <Badge className={item.type === "诗歌" ? "bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs mr-1" : item.type === "文言文原文" ? "bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs mr-1" : item.type === "字词" ? "bg-amber-100 text-amber-700 hover:bg-amber-100 text-xs mr-1" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs mr-1"}>
                         {item.type}
                       </Badge>
                       <span className="text-sm">{item.title}</span>

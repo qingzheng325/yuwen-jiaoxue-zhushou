@@ -373,6 +373,8 @@ export function StudentRosterModule() {
                                             ? "bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs mr-1"
                                             : item.type === "文言文原文"
                                             ? "bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs mr-1"
+                                            : item.type === "字词"
+                                            ? "bg-amber-100 text-amber-700 hover:bg-amber-100 text-xs mr-1"
                                             : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs mr-1"
                                         }
                                       >
