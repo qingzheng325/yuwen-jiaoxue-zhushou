@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportToExcel } from "@/lib/io";
 import * as XLSX from "xlsx";
 import type { Question } from "@/types";
@@ -16,20 +15,15 @@ import { Library, Plus, Trash2, Download, Upload, Filter, Tag, X, ChevronDown, C
 export function QuestionBankModule() {
   const { data, addQuestion, addQuestions, updateQuestion, deleteQuestion, addTag, removeTag } = useStore();
   const [selectedExamPoints, setSelectedExamPoints] = useState<string[]>([]);
+  const [selectedTechniques, setSelectedTechniques] = useState<string[]>([]);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [searchText, setSearchText] = useState("");
-  const [selectedType, setSelectedType] = useState<string>("all");
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [tagMgrOpen, setTagMgrOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [deleteQuestionTarget, setDeleteQuestionTarget] = useState<Question | null>(null);
-
-  const allTypes = useMemo(() => {
-    const types = new Set(data.questions.map((q) => q.type).filter(Boolean));
-    return Array.from(types);
-  }, [data.questions]);
 
   const filteredQuestions = useMemo(() => {
     return data.questions.filter((q) => {
@@ -38,15 +32,16 @@ export function QuestionBankModule() {
         const text = searchText.toLowerCase();
         const matchContent = q.content.toLowerCase().includes(text);
         const matchAnswer = q.answer?.toLowerCase().includes(text);
-        const matchAnalysis = q.analysis?.toLowerCase().includes(text);
         const matchSource = q.source?.toLowerCase().includes(text);
-        if (!matchContent && !matchAnswer && !matchAnalysis && !matchSource) return false;
+        if (!matchContent && !matchAnswer && !matchSource) return false;
       }
-      // Type filter
-      if (selectedType !== "all" && q.type !== selectedType) return false;
       // Exam point filter (AND: must have all selected)
       if (selectedExamPoints.length > 0) {
         if (!selectedExamPoints.every((t) => q.examPoints.includes(t))) return false;
+      }
+      // Technique filter (AND: must have all selected)
+      if (selectedTechniques.length > 0) {
+        if (!selectedTechniques.every((t) => q.techniques.includes(t))) return false;
       }
       // Theme filter (AND: must have all selected)
       if (selectedThemes.length > 0) {
@@ -54,10 +49,13 @@ export function QuestionBankModule() {
       }
       return true;
     });
-  }, [data.questions, searchText, selectedType, selectedExamPoints, selectedThemes]);
+  }, [data.questions, searchText, selectedExamPoints, selectedTechniques, selectedThemes]);
 
   const toggleExamPoint = (tag: string) => {
     setSelectedExamPoints((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+  };
+  const toggleTechnique = (tag: string) => {
+    setSelectedTechniques((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
   };
   const toggleTheme = (tag: string) => {
     setSelectedThemes((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
@@ -70,11 +68,10 @@ export function QuestionBankModule() {
         name: "题目",
         data: filteredQuestions.map((q) => ({
           题目内容: q.content,
-          题型: q.type,
           考点: q.examPoints.join("、"),
+          手法: q.techniques.join("、"),
           主题: q.themes.join("、"),
           答案: q.answer || "",
-          解析: q.analysis || "",
           来源: q.source || "",
         })),
       }],
@@ -92,18 +89,18 @@ export function QuestionBankModule() {
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
       const questions: Omit<Question, "id">[] = rows.map((row) => {
         const content = String(row["题目内容"] || row["题目"] || row["content"] || "").trim();
-        const type = String(row["题型"] || row["type"] || "其他").trim();
         const examPoints = String(row["考点"] || "").split(/[、,，;；\s]+/).filter(Boolean);
+        const techniques = String(row["手法"] || row["技法"] || "").split(/[、,，;；\s]+/).filter(Boolean);
         const themes = String(row["主题"] || "").split(/[、,，;；\s]+/).filter(Boolean);
         const answer = String(row["答案"] || row["answer"] || "").trim() || undefined;
-        const analysis = String(row["解析"] || row["analysis"] || "").trim() || undefined;
         const source = String(row["来源"] || row["source"] || "").trim() || undefined;
-        return { content, type, examPoints, themes, answer, analysis, source };
+        return { content, examPoints, techniques, themes, answer, source };
       }).filter((q) => q.content);
       if (questions.length > 0) {
         // Auto-add new tags
         for (const q of questions) {
           for (const t of q.examPoints) addTag("考点", t);
+          for (const t of q.techniques) addTag("手法", t);
           for (const t of q.themes) addTag("主题", t);
         }
         addQuestions(questions);
@@ -122,6 +119,7 @@ export function QuestionBankModule() {
   const handleSaveQuestion = (qData: Omit<Question, "id">) => {
     // Auto-add new tags
     for (const t of qData.examPoints) addTag("考点", t);
+    for (const t of qData.techniques) addTag("手法", t);
     for (const t of qData.themes) addTag("主题", t);
 
     if (editingQuestion) {
@@ -134,6 +132,7 @@ export function QuestionBankModule() {
   };
 
   const examPointGroup = data.tagGroups.find((g) => g.name === "考点");
+  const techniqueGroup = data.tagGroups.find((g) => g.name === "手法");
   const themeGroup = data.tagGroups.find((g) => g.name === "主题");
 
   return (
@@ -169,7 +168,7 @@ export function QuestionBankModule() {
                 />
                 <div className="rounded-md bg-slate-50 p-3 text-xs text-slate-500 space-y-1">
                   <p className="font-medium text-slate-600">Excel 列格式：</p>
-                  <p>题目内容 | 题型 | 考点 | 主题 | 答案 | 解析 | 来源</p>
+                  <p>题目内容 | 考点 | 手法 | 主题 | 答案 | 来源</p>
                   <p>考点和主题可用"、"分隔多个标签</p>
                 </div>
               </div>
@@ -189,12 +188,12 @@ export function QuestionBankModule() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-slate-400" />
           <span className="text-sm font-medium text-slate-600">筛选</span>
-          {(selectedExamPoints.length > 0 || selectedThemes.length > 0 || selectedType !== "all" || searchText) && (
+          {(selectedExamPoints.length > 0 || selectedTechniques.length > 0 || selectedThemes.length > 0 || searchText) && (
             <Button
               size="sm"
               variant="ghost"
               className="h-6 text-xs text-slate-400"
-              onClick={() => { setSelectedExamPoints([]); setSelectedThemes([]); setSelectedType("all"); setSearchText(""); }}
+              onClick={() => { setSelectedExamPoints([]); setSelectedTechniques([]); setSelectedThemes([]); setSearchText(""); }}
             >
               清除筛选
             </Button>
@@ -207,28 +206,10 @@ export function QuestionBankModule() {
           <Input
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="搜索题目内容、答案、解析..."
+            placeholder="搜索题目内容、答案、来源..."
             className="pl-8"
           />
         </div>
-
-        {/* Type filter */}
-        {allTypes.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-500 w-12">题型</span>
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="h-7 w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                {allTypes.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         {/* Exam point tags */}
         {examPointGroup && examPointGroup.tags.length > 0 && (
@@ -247,6 +228,29 @@ export function QuestionBankModule() {
                 >
                   {tag}
                   {selectedExamPoints.includes(tag) && <span className="ml-1">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Technique tags */}
+        {techniqueGroup && techniqueGroup.tags.length > 0 && (
+          <div className="flex items-start gap-2">
+            <span className="text-xs text-slate-500 w-12 mt-1.5">手法</span>
+            <div className="flex flex-wrap gap-1.5 flex-1">
+              {techniqueGroup.tags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTechnique(tag)}
+                  className={`rounded-md px-2 py-1 text-xs transition-colors ${
+                    selectedTechniques.includes(tag)
+                      ? "bg-teal-500 text-white"
+                      : "bg-white border border-slate-200 text-slate-600 hover:border-teal-300"
+                  }`}
+                >
+                  {tag}
+                  {selectedTechniques.includes(tag) && <span className="ml-1">✓</span>}
                 </button>
               ))}
             </div>
@@ -277,13 +281,19 @@ export function QuestionBankModule() {
         )}
 
         {/* Selected filters summary */}
-        {(selectedExamPoints.length > 0 || selectedThemes.length > 0) && (
+        {(selectedExamPoints.length > 0 || selectedTechniques.length > 0 || selectedThemes.length > 0) && (
           <div className="flex items-center gap-2 flex-wrap pt-1">
             <span className="text-xs text-slate-400">已选标签：</span>
             {selectedExamPoints.map((t) => (
               <Badge key={`ep-${t}`} className="bg-blue-100 text-blue-700 hover:bg-blue-100 gap-1">
                 考点:{t}
                 <button onClick={() => toggleExamPoint(t)}><X className="h-3 w-3" /></button>
+              </Badge>
+            ))}
+            {selectedTechniques.map((t) => (
+              <Badge key={`te-${t}`} className="bg-teal-100 text-teal-700 hover:bg-teal-100 gap-1">
+                手法:{t}
+                <button onClick={() => toggleTechnique(t)}><X className="h-3 w-3" /></button>
               </Badge>
             ))}
             {selectedThemes.map((t) => (
@@ -324,8 +334,10 @@ export function QuestionBankModule() {
         onSave={handleSaveQuestion}
         examPointTags={examPointGroup?.tags || []}
         themeTags={themeGroup?.tags || []}
+        techniqueTags={techniqueGroup?.tags || []}
         onAddExamPointTag={(t) => addTag("考点", t)}
         onAddThemeTag={(t) => addTag("主题", t)}
+        onAddTechniqueTag={(t) => addTag("手法", t)}
       />
 
       {/* Tag manager */}
@@ -334,10 +346,13 @@ export function QuestionBankModule() {
         onOpenChange={setTagMgrOpen}
         examPointTags={examPointGroup?.tags || []}
         themeTags={themeGroup?.tags || []}
+        techniqueTags={techniqueGroup?.tags || []}
         onAddExamPointTag={(t) => addTag("考点", t)}
         onAddThemeTag={(t) => addTag("主题", t)}
+        onAddTechniqueTag={(t) => addTag("手法", t)}
         onRemoveExamPointTag={(t) => removeTag("考点", t)}
         onRemoveThemeTag={(t) => removeTag("主题", t)}
+        onRemoveTechniqueTag={(t) => removeTag("手法", t)}
       />
 
       <ConfirmDialog
@@ -374,7 +389,6 @@ function QuestionCard({
         <span className="text-xs text-slate-400 mt-0.5 whitespace-nowrap">#{index}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 flex-wrap">
-            {question.type && <Badge variant="outline" className="text-xs">{question.type}</Badge>}
             <p className={`text-sm flex-1 ${expanded ? "" : "line-clamp-2"}`}>{question.content}</p>
           </div>
 
@@ -382,6 +396,9 @@ function QuestionCard({
           <div className="flex flex-wrap gap-1 mt-2">
             {question.examPoints.map((t) => (
               <span key={t} className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">{t}</span>
+            ))}
+            {question.techniques.map((t) => (
+              <span key={t} className="rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-600">{t}</span>
             ))}
             {question.themes.map((t) => (
               <span key={t} className="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-600">{t}</span>
@@ -391,8 +408,8 @@ function QuestionCard({
             )}
           </div>
 
-          {/* Answer & Analysis (expandable) */}
-          {expanded && (question.answer || question.analysis) && (
+          {/* Answer (expandable) */}
+          {expanded && question.answer && (
             <div className="mt-2 space-y-1.5 border-t pt-2">
               {question.answer && (
                 <div className="text-sm">
@@ -400,17 +417,11 @@ function QuestionCard({
                   <span className="text-slate-700">{question.answer}</span>
                 </div>
               )}
-              {question.analysis && (
-                <div className="text-sm">
-                  <span className="text-xs font-medium text-slate-500">解析：</span>
-                  <span className="text-slate-600">{question.analysis}</span>
-                </div>
-              )}
             </div>
           )}
 
           <div className="flex items-center gap-2 mt-2">
-            {(question.answer || question.analysis) && (
+            {question.answer && (
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="text-xs text-slate-400 hover:text-slate-600 flex items-center"
@@ -439,8 +450,10 @@ function QuestionEditDialog({
   onSave,
   examPointTags,
   themeTags,
+  techniqueTags,
   onAddExamPointTag,
   onAddThemeTag,
+  onAddTechniqueTag,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -448,30 +461,32 @@ function QuestionEditDialog({
   onSave: (q: Omit<Question, "id">) => void;
   examPointTags: string[];
   themeTags: string[];
+  techniqueTags: string[];
   onAddExamPointTag: (t: string) => void;
   onAddThemeTag: (t: string) => void;
+  onAddTechniqueTag: (t: string) => void;
 }) {
   const [content, setContent] = useState("");
-  const [type, setType] = useState("其他");
   const [answer, setAnswer] = useState("");
-  const [analysis, setAnalysis] = useState("");
   const [source, setSource] = useState("");
   const [examPoints, setExamPoints] = useState<string[]>([]);
+  const [techniques, setTechniques] = useState<string[]>([]);
   const [themes, setThemes] = useState<string[]>([]);
   const [newExamPoint, setNewExamPoint] = useState("");
+  const [newTechnique, setNewTechnique] = useState("");
   const [newTheme, setNewTheme] = useState("");
 
   // Sync when dialog opens
   useMemo(() => {
     if (open) {
       setContent(question?.content || "");
-      setType(question?.type || "其他");
       setAnswer(question?.answer || "");
-      setAnalysis(question?.analysis || "");
       setSource(question?.source || "");
       setExamPoints(question?.examPoints || []);
+      setTechniques(question?.techniques || []);
       setThemes(question?.themes || []);
       setNewExamPoint("");
+      setNewTechnique("");
       setNewTheme("");
     }
   }, [open, question]);
@@ -480,11 +495,10 @@ function QuestionEditDialog({
     if (!content.trim()) return;
     onSave({
       content: content.trim(),
-      type: type.trim() || "其他",
       answer: answer.trim() || undefined,
-      analysis: analysis.trim() || undefined,
       source: source.trim() || undefined,
       examPoints,
+      techniques,
       themes,
     });
   };
@@ -499,6 +513,15 @@ function QuestionEditDialog({
       setExamPoints([...examPoints, t]);
       onAddExamPointTag(t);
       setNewExamPoint("");
+    }
+  };
+
+  const handleAddNewTechnique = () => {
+    const t = newTechnique.trim();
+    if (t && !techniques.includes(t)) {
+      setTechniques([...techniques, t]);
+      onAddTechniqueTag(t);
+      setNewTechnique("");
     }
   };
 
@@ -522,23 +545,13 @@ function QuestionEditDialog({
             <Label>题目内容 *</Label>
             <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} className="mt-1" placeholder="输入题目内容" />
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label>题型</Label>
-              <Input value={type} onChange={(e) => setType(e.target.value)} className="mt-1" placeholder="如：选择题、填空题" />
-            </div>
-            <div className="flex-1">
-              <Label>来源</Label>
-              <Input value={source} onChange={(e) => setSource(e.target.value)} className="mt-1" placeholder="如：2024年中考真题" />
-            </div>
+          <div>
+            <Label>来源</Label>
+            <Input value={source} onChange={(e) => setSource(e.target.value)} className="mt-1" placeholder="如：2024年中考真题" />
           </div>
           <div>
             <Label>答案</Label>
             <Textarea value={answer} onChange={(e) => setAnswer(e.target.value)} rows={2} className="mt-1" placeholder="参考答案" />
-          </div>
-          <div>
-            <Label>解析</Label>
-            <Textarea value={analysis} onChange={(e) => setAnalysis(e.target.value)} rows={2} className="mt-1" placeholder="题目解析" />
           </div>
 
           {/* Exam points */}
@@ -572,6 +585,40 @@ function QuestionEditDialog({
                 className="h-8 text-sm"
               />
               <Button size="sm" variant="outline" onClick={handleAddNewExamPoint}>添加</Button>
+            </div>
+          </div>
+
+          {/* Techniques */}
+          <div>
+            <Label>手法标签</Label>
+            <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
+              {techniques.map((t) => (
+                <Badge key={t} className="bg-teal-500 text-white hover:bg-teal-500 gap-1">
+                  {t}
+                  <button onClick={() => setTechniques(techniques.filter((x) => x !== t))}><X className="h-3 w-3" /></button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {techniqueTags.filter((t) => !techniques.includes(t)).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => toggleArr(techniques, t, setTechniques)}
+                  className="rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:border-teal-300"
+                >
+                  + {t}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <Input
+                value={newTechnique}
+                onChange={(e) => setNewTechnique(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddNewTechnique()}
+                placeholder="输入新手法标签"
+                className="h-8 text-sm"
+              />
+              <Button size="sm" variant="outline" onClick={handleAddNewTechnique}>添加</Button>
             </div>
           </div>
 
@@ -623,22 +670,29 @@ function TagManagerDialog({
   onOpenChange,
   examPointTags,
   themeTags,
+  techniqueTags,
   onAddExamPointTag,
   onAddThemeTag,
+  onAddTechniqueTag,
   onRemoveExamPointTag,
   onRemoveThemeTag,
+  onRemoveTechniqueTag,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   examPointTags: string[];
   themeTags: string[];
+  techniqueTags: string[];
   onAddExamPointTag: (t: string) => void;
   onAddThemeTag: (t: string) => void;
+  onAddTechniqueTag: (t: string) => void;
   onRemoveExamPointTag: (t: string) => void;
   onRemoveThemeTag: (t: string) => void;
+  onRemoveTechniqueTag: (t: string) => void;
 }) {
   const [newEP, setNewEP] = useState("");
   const [newTH, setNewTH] = useState("");
+  const [newTE, setNewTE] = useState("");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -660,6 +714,21 @@ function TagManagerDialog({
             <div className="flex gap-1">
               <Input value={newEP} onChange={(e) => setNewEP(e.target.value)} onKeyDown={(e) => e.key === "Enter" && newEP.trim() && (onAddExamPointTag(newEP.trim()), setNewEP(""))} placeholder="新考点标签" className="h-8" />
               <Button size="sm" variant="outline" onClick={() => { if (newEP.trim()) { onAddExamPointTag(newEP.trim()); setNewEP(""); } }}>添加</Button>
+            </div>
+          </div>
+          <div>
+            <Label>手法标签</Label>
+            <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
+              {techniqueTags.map((t) => (
+                <Badge key={t} className="bg-teal-100 text-teal-700 hover:bg-teal-100 gap-1">
+                  {t}
+                  <button onClick={() => onRemoveTechniqueTag(t)}><X className="h-3 w-3" /></button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <Input value={newTE} onChange={(e) => setNewTE(e.target.value)} onKeyDown={(e) => e.key === "Enter" && newTE.trim() && (onAddTechniqueTag(newTE.trim()), setNewTE(""))} placeholder="新手法标签" className="h-8" />
+              <Button size="sm" variant="outline" onClick={() => { if (newTE.trim()) { onAddTechniqueTag(newTE.trim()); setNewTE(""); } }}>添加</Button>
             </div>
           </div>
           <div>

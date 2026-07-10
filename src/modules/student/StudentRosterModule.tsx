@@ -604,7 +604,11 @@ export function StudentRosterModule() {
                                 <div className="min-w-0 flex-1">
                                   <div className="text-sm">{q.content}</div>
                                   <div className="flex flex-wrap gap-1 mt-1">
-                                    <Badge variant="outline" className="text-xs">{q.type}</Badge>
+                                    {q.techniques.map((t) => (
+                                      <span key={t} className="text-xs bg-cyan-50 text-cyan-600 rounded px-1.5 py-0.5">
+                                        {t}
+                                      </span>
+                                    ))}
                                     {q.examPoints.map((t) => (
                                       <span key={t} className="text-xs bg-orange-50 text-orange-600 rounded px-1.5 py-0.5">
                                         {t}

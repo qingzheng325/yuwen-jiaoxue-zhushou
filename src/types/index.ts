@@ -52,11 +52,10 @@ export interface ScoreRecord {
 export interface Question {
   id: string;
   content: string;
-  type: string;
   answer?: string;
-  analysis?: string;
-  examPoints: string[];
-  themes: string[];
+  examPoints: string[]; // 考点
+  techniques: string[]; // 手法
+  themes: string[]; // 主题
   source?: string;
   wrongBy?: string[]; // 标记该题常错的学生 id 列表
 }

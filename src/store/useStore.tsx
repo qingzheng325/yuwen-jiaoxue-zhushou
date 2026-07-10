@@ -19,10 +19,32 @@ const emptyData: AppData = {
   scoreRecords: [],
   questions: [],
   tagGroups: [
-    { name: "考点", tags: ["人物形象", "标题", "环境描写", "修辞手法", "主旨情感", "结构技巧", "词语赏析", "句段作用"] },
+    { name: "考点", tags: ["修辞手法", "表达方式", "标题作用", "人物形象", "环境描写", "主旨情感", "结构技巧", "词语赏析", "句段作用"] },
+    { name: "手法", tags: ["比喻", "拟人", "以小见大", "议论", "抒情", "线索"] },
     { name: "主题", tags: ["家国情怀", "自然风光", "亲情友情", "成长感悟", "历史文化", "品格修养", "社会生活", "哲理思辨"] },
   ],
 };
+
+const TECHNIQUE_DEFAULTS = ["比喻", "拟人", "以小见大", "议论", "抒情", "线索"];
+const EXAM_POINT_REQUIRED = ["修辞手法", "表达方式", "标题作用"];
+
+function migrateTagGroups(existing: { name: string; tags: string[] }[] | undefined): { name: string; tags: string[] }[] {
+  const groups = (existing || []).map((g) => ({ name: g.name, tags: [...g.tags] }));
+  const ensureGroup = (name: string, defaults: string[]) => {
+    let g = groups.find((x) => x.name === name);
+    if (!g) {
+      g = { name, tags: [] };
+      groups.push(g);
+    }
+    for (const t of defaults) {
+      if (!g.tags.includes(t)) g.tags.push(t);
+    }
+  };
+  // 手法 为新增字段，确保老数据也存在；考点 补充用户指定的示例标签
+  ensureGroup("手法", TECHNIQUE_DEFAULTS);
+  ensureGroup("考点", EXAM_POINT_REQUIRED);
+  return groups;
+}
 
 function loadData(): AppData {
   try {
@@ -37,8 +59,17 @@ function loadData(): AppData {
         recitationMarks: parsed.recitationMarks || [],
         exams: parsed.exams || [],
         scoreRecords: parsed.scoreRecords || [],
-        questions: parsed.questions || [],
-        tagGroups: parsed.tagGroups || emptyData.tagGroups,
+        questions: (parsed.questions || []).map((q: any) => ({
+          id: q.id,
+          content: q.content,
+          answer: q.answer,
+          source: q.source,
+          examPoints: q.examPoints || [],
+          techniques: q.techniques || [],
+          themes: q.themes || [],
+          wrongBy: q.wrongBy || [],
+        })),
+        tagGroups: migrateTagGroups(parsed.tagGroups),
       };
       return clean;
     }
@@ -354,6 +385,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ),
         questions: prev.questions.map((q) => {
           if (groupName === "考点") return { ...q, examPoints: q.examPoints.filter((t) => t !== tag) };
+          if (groupName === "手法") return { ...q, techniques: q.techniques.filter((t) => t !== tag) };
           if (groupName === "主题") return { ...q, themes: q.themes.filter((t) => t !== tag) };
           return q;
         }),
