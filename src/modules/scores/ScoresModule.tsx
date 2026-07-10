@@ -126,8 +126,8 @@ export function ScoresModule() {
     // 及格率：折合分值 >= 60 的人数 / 班级总人数（学生名单中导入的各班人数）
     const passCount = scores.filter((s) => toConverted(s, selectedExam.totalScore) >= 60).length;
     const passRate = filteredStudents.length > 0 ? (passCount / filteredStudents.length) * 100 : 0;
-    // 优秀率：折合分值 >= 80 的人数占比
-    const excellentRate = (scores.filter((s) => toConverted(s, selectedExam.totalScore) >= 80).length / scores.length) * 100;
+    // 优秀率：折合分值 >= 80 的人数 / 班级总人数
+    const excellentRate = filteredStudents.length > 0 ? (scores.filter((s) => toConverted(s, selectedExam.totalScore) >= 80).length / filteredStudents.length) * 100 : 0;
     // 中位数 / 前80%平均分（单次考试用「绝对分值」）
     const median = medianOf(scores);
     const top80Avg = top80AvgOf(scores);
@@ -421,7 +421,7 @@ function ExamStats({ stats }: {
         </div>
         <div className="rounded-lg border p-3 text-center bg-emerald-50">
           <div className="text-xl font-bold text-emerald-600">{stats.excellentRate.toFixed(1)}%</div>
-          <div className="text-xs text-slate-500">优秀率（折合分值≥80）</div>
+          <div className="text-xs text-slate-500">优秀率（折合分值≥80，占班级总人数）</div>
         </div>
         <div className="rounded-lg border p-3 text-center bg-amber-50">
           <div className="text-xl font-bold text-amber-600">{stats.passRate.toFixed(1)}%</div>
@@ -499,8 +499,8 @@ function ClassCompare({
       const participants = recs.length;
       const scores = recs.map((r) => r.score);
       const converted = recs.map((r) => toConverted(r.score, exam.totalScore));
-      // 优秀率仍按参加考试人数计算
-      const excellentRate = participants > 0 ? (converted.filter((v) => v >= 80).length / participants) * 100 : 0;
+      // 优秀率：折合分值≥80 人数 / 班级总人数
+      const excellentRate = classTotal > 0 ? (converted.filter((v) => v >= 80).length / classTotal) * 100 : 0;
       // 及格率：折合分值≥60 人数 / 班级总人数
       const passRate = classTotal > 0 ? (converted.filter((v) => v >= 60).length / classTotal) * 100 : 0;
       const avgScore = participants > 0 ? scores.reduce((a, b) => a + b, 0) / participants : 0;
@@ -531,7 +531,7 @@ function ClassCompare({
     <div className="space-y-4">
       <div className="rounded-lg border">
         <div className="px-3 py-2 border-b bg-slate-50 text-sm font-medium">
-          班级汇总 — {exam.name}（满分{exam.totalScore}分，优秀率=折合分值≥80（占参加人数），及格率=折合分值≥60人数/班级总人数）
+          班级汇总 — {exam.name}（满分{exam.totalScore}分，优秀率=折合分值≥80人数/班级总人数，及格率=折合分值≥60人数/班级总人数）
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

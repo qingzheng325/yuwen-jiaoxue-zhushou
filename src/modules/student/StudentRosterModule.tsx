@@ -174,7 +174,8 @@ export function StudentRosterModule() {
         if (recs.length === 0) return null;
         const scores = recs.map((r) => r.score);
         const converted = recs.map((r) => toConverted(r.score, exam.totalScore));
-        const excellentRate = (converted.filter((v) => v >= 80).length / recs.length) * 100;
+        // 优秀率：折合分值≥80 人数 / 班级总人数
+        const excellentRate = classTotal > 0 ? (converted.filter((v) => v >= 80).length / classTotal) * 100 : 0;
         // 及格率：折合分值≥60 人数 / 班级总人数
         const passRate = classTotal > 0 ? (converted.filter((v) => v >= 60).length / classTotal) * 100 : 0;
         const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -695,7 +696,7 @@ export function StudentRosterModule() {
                       </div>
                       <div className="rounded-lg border p-3 text-center bg-emerald-50">
                         <div className="text-xl font-bold text-emerald-600">{classSummaryCards.excellent}%</div>
-                        <div className="text-xs text-slate-500">平均优秀率</div>
+                        <div className="text-xs text-slate-500">平均优秀率(占班级总人数)</div>
                       </div>
                       <div className="rounded-lg border p-3 text-center bg-amber-50">
                         <div className="text-xl font-bold text-amber-600">{classSummaryCards.pass}%</div>
@@ -724,7 +725,7 @@ export function StudentRosterModule() {
 
                   {/* 趋势图：优秀率 / 及格率 / 折合分值平均分 */}
                   <div className="rounded-lg border p-3">
-                    <div className="text-sm font-medium mb-2">班级趋势（优秀率(占参加人数) · 及格率(占班级总人数) · 折合分值平均分）</div>
+                    <div className="text-sm font-medium mb-2">班级趋势（优秀率(占班级总人数) · 及格率(占班级总人数) · 折合分值平均分）</div>
                     <ResponsiveContainer width="100%" height={260}>
                       <LineChart data={classChartRows}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
