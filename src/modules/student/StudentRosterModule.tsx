@@ -131,8 +131,8 @@ export function StudentRosterModule() {
     const converted = scoreRows.map((p) => p.converted);
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     const avgConverted = converted.reduce((a, b) => a + b, 0) / converted.length;
-    const max = Math.max(...scores);
-    const min = Math.min(...scores);
+    const max = Math.max(...converted);
+    const min = Math.min(...converted);
     const passRate = (converted.filter((v) => v >= 60).length / converted.length) * 100;
     return { avg, avgConverted, max, min, passRate, count: scores.length };
   }, [scoreRows]);
@@ -426,12 +426,12 @@ export function StudentRosterModule() {
                               <div className="text-xs text-slate-500">折合分值平均分</div>
                             </div>
                             <div className="rounded-lg border p-2 text-center bg-green-50">
-                              <div className="text-lg font-bold text-green-600">{scoreSummary.max}</div>
-                              <div className="text-xs text-slate-500">最高分</div>
+                              <div className="text-lg font-bold text-green-600">{scoreSummary.max.toFixed(1)}</div>
+                              <div className="text-xs text-slate-500">折合分值最高分</div>
                             </div>
                             <div className="rounded-lg border p-2 text-center bg-red-50">
-                              <div className="text-lg font-bold text-red-500">{scoreSummary.min}</div>
-                              <div className="text-xs text-slate-500">最低分</div>
+                              <div className="text-lg font-bold text-red-500">{scoreSummary.min.toFixed(1)}</div>
+                              <div className="text-xs text-slate-500">折合分值最低分</div>
                             </div>
                           </div>
 
