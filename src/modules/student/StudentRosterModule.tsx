@@ -164,6 +164,8 @@ export function StudentRosterModule() {
   // ===== 班级档案：各班逐场考试统计 =====
   const classExamRows = useMemo(() => {
     if (!classSelected) return [];
+    // 班级总人数（学生名单中导入的该班学生数），用于及格率分母
+    const classTotal = data.students.filter((s) => (s.class || "").trim() === classSelected).length;
     return sortedExams
       .map((exam) => {
         const recs = data.scoreRecords.filter(
@@ -173,7 +175,8 @@ export function StudentRosterModule() {
         const scores = recs.map((r) => r.score);
         const converted = recs.map((r) => toConverted(r.score, exam.totalScore));
         const excellentRate = (converted.filter((v) => v >= 80).length / recs.length) * 100;
-        const passRate = (converted.filter((v) => v >= 60).length / recs.length) * 100;
+        // 及格率：折合分值≥60 人数 / 班级总人数
+        const passRate = classTotal > 0 ? (converted.filter((v) => v >= 60).length / classTotal) * 100 : 0;
         const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
         const avgConverted = converted.reduce((a, b) => a + b, 0) / converted.length;
         return {
@@ -696,7 +699,7 @@ export function StudentRosterModule() {
                       </div>
                       <div className="rounded-lg border p-3 text-center bg-amber-50">
                         <div className="text-xl font-bold text-amber-600">{classSummaryCards.pass}%</div>
-                        <div className="text-xs text-slate-500">平均及格率</div>
+                        <div className="text-xs text-slate-500">平均及格率(占班级总人数)</div>
                       </div>
                     </div>
                   )}
@@ -721,7 +724,7 @@ export function StudentRosterModule() {
 
                   {/* 趋势图：优秀率 / 及格率 / 折合分值平均分 */}
                   <div className="rounded-lg border p-3">
-                    <div className="text-sm font-medium mb-2">班级趋势（优秀率 · 及格率 · 折合分值平均分）</div>
+                    <div className="text-sm font-medium mb-2">班级趋势（优秀率(占参加人数) · 及格率(占班级总人数) · 折合分值平均分）</div>
                     <ResponsiveContainer width="100%" height={260}>
                       <LineChart data={classChartRows}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

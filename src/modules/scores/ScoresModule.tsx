@@ -123,9 +123,9 @@ export function ScoresModule() {
     const max = Math.max(...scores);
     const min = Math.min(...scores);
     const avgPct = toConverted(avg, selectedExam.totalScore);
-    // 及格率：折合分值 >= 60 的人数占比
+    // 及格率：折合分值 >= 60 的人数 / 班级总人数（学生名单中导入的各班人数）
     const passCount = scores.filter((s) => toConverted(s, selectedExam.totalScore) >= 60).length;
-    const passRate = (passCount / scores.length) * 100;
+    const passRate = filteredStudents.length > 0 ? (passCount / filteredStudents.length) * 100 : 0;
     // 优秀率：折合分值 >= 80 的人数占比
     const excellentRate = (scores.filter((s) => toConverted(s, selectedExam.totalScore) >= 80).length / scores.length) * 100;
     // 中位数 / 前80%平均分（单次考试用「绝对分值」）
@@ -425,7 +425,7 @@ function ExamStats({ stats }: {
         </div>
         <div className="rounded-lg border p-3 text-center bg-amber-50">
           <div className="text-xl font-bold text-amber-600">{stats.passRate.toFixed(1)}%</div>
-          <div className="text-xs text-slate-500">及格率（折合分值≥60）</div>
+          <div className="text-xs text-slate-500">及格率（折合分值≥60，占班级总人数）</div>
         </div>
       </div>
 
@@ -491,20 +491,21 @@ function ClassCompare({
 
   const classSummary = useMemo(() => {
     return classList.map((c) => {
+      // 班级总人数（学生名单中导入的该班学生数），用于及格率分母
+      const classTotal = students.filter((s) => (s.class || "").trim() === c).length;
       const recs = scoreRecords.filter(
         (r) => r.examId === exam.id && (studentById[r.studentId]?.class || "") === c
       );
       const participants = recs.length;
-      if (participants === 0) {
-        return { class: c, participants: 0, excellentRate: 0, passRate: 0, avgScore: 0, maxScore: 0, minScore: 0 };
-      }
       const scores = recs.map((r) => r.score);
       const converted = recs.map((r) => toConverted(r.score, exam.totalScore));
-      const excellentRate = (converted.filter((v) => v >= 80).length / participants) * 100;
-      const passRate = (converted.filter((v) => v >= 60).length / participants) * 100;
-      const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-      const maxScore = Math.max(...scores);
-      const minScore = Math.min(...scores);
+      // 优秀率仍按参加考试人数计算
+      const excellentRate = participants > 0 ? (converted.filter((v) => v >= 80).length / participants) * 100 : 0;
+      // 及格率：折合分值≥60 人数 / 班级总人数
+      const passRate = classTotal > 0 ? (converted.filter((v) => v >= 60).length / classTotal) * 100 : 0;
+      const avgScore = participants > 0 ? scores.reduce((a, b) => a + b, 0) / participants : 0;
+      const maxScore = participants > 0 ? Math.max(...scores) : 0;
+      const minScore = participants > 0 ? Math.min(...scores) : 0;
       return {
         class: c,
         participants,
@@ -530,7 +531,7 @@ function ClassCompare({
     <div className="space-y-4">
       <div className="rounded-lg border">
         <div className="px-3 py-2 border-b bg-slate-50 text-sm font-medium">
-          班级汇总 — {exam.name}（满分{exam.totalScore}分，优秀率=折合分值≥80，及格率=折合分值≥60）
+          班级汇总 — {exam.name}（满分{exam.totalScore}分，优秀率=折合分值≥80（占参加人数），及格率=折合分值≥60人数/班级总人数）
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
