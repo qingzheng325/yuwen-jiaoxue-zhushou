@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { BookOpen, TrendingUp, Library, Users, Database, Download, Upload, RotateCcw } from "lucide-react";
 import type { AppData } from "@/types";
+import { seedQuestions } from "@/data/seedQuestions";
 import { ConfirmDialog } from "@/modules/common/ConfirmDialog";
 
 type Tab = "students" | "recitation" | "scores" | "questionbank";
@@ -20,10 +21,11 @@ const tabs: { key: Tab; label: string; icon: typeof BookOpen; desc: string }[] =
 ];
 
 function DataManagement() {
-  const { exportAllData, importAllData, resetAll, data } = useStore();
+  const { exportAllData, importAllData, resetAll, loadSeedQuestions, data } = useStore();
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [seedMsg, setSeedMsg] = useState("");
 
   const handleImport = () => {
     try {
@@ -87,6 +89,18 @@ function DataManagement() {
             <Button variant="outline" className="w-full" onClick={exportAllData}>
               <Download className="h-4 w-4 mr-2" /> 导出全部数据（JSON备份）
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                loadSeedQuestions();
+                setSeedMsg(`每日训练总表已载入题库（共 ${seedQuestions.length} 题）`);
+              }}
+            >
+              <Library className="h-4 w-4 mr-2" /> 载入每日训练总表（预置题库）
+            </Button>
+            {seedMsg && <p className="text-xs text-green-600 text-center">{seedMsg}</p>}
 
             <Dialog open={importOpen} onOpenChange={setImportOpen}>
               <DialogTrigger asChild>

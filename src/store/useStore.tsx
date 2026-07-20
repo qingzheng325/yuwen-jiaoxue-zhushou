@@ -7,6 +7,7 @@ import type {
   Exam,
   Question,
 } from "@/types";
+import { seedQuestions } from "@/data/seedQuestions";
 
 const STORAGE_KEY = "chinese-teacher-assistant";
 
@@ -47,12 +48,13 @@ function migrateTagGroups(existing: { name: string; tags: string[] }[] | undefin
 }
 
 function loadData(): AppData {
+  let base: AppData = emptyData;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       // Migration: remove old fields, add new ones
-      const clean: AppData = {
+      base = {
         students: parsed.students || [],
         recitationItems: parsed.recitationItems || [],
         recitationRounds: parsed.recitationRounds || [],
@@ -71,12 +73,18 @@ function loadData(): AppData {
         })),
         tagGroups: migrateTagGroups(parsed.tagGroups),
       };
-      return clean;
     }
   } catch (e) {
     console.error("Failed to load data", e);
+    base = emptyData;
   }
-  return emptyData;
+  // 合并预置题库（每日训练总表）：按 id 去重，确保首次打开即见且不重复
+  const ids = new Set(base.questions.map((q) => q.id));
+  const extra = seedQuestions.filter((s) => !ids.has(s.id));
+  if (extra.length > 0) {
+    base = { ...base, questions: [...base.questions, ...extra] };
+  }
+  return base;
 }
 
 function uid(): string {
@@ -119,6 +127,7 @@ interface StoreContextValue {
   exportAllData: () => void;
   importAllData: (data: AppData) => void;
   resetAll: () => void;
+  loadSeedQuestions: () => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -415,6 +424,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     resetAll: () => {
       setData(emptyData);
+    },
+
+    loadSeedQuestions: () => {
+      setData((prev) => {
+        const ids = new Set(prev.questions.map((q) => q.id));
+        const extra = seedQuestions.filter((s) => !ids.has(s.id));
+        if (extra.length === 0) return prev;
+        return { ...prev, questions: [...prev.questions, ...extra] };
+      });
     },
   };
 
